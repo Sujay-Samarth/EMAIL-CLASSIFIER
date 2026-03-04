@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Email Classifier — Intelligent Email Classification</title>
+    <meta name="description" content="AI-powered email classification system that categorizes emails into Spam, Job Related, Important, and Promotion using Machine Learning." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        /* ───────── Reset & Variables ───────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0f0f1a;
+            --surface: rgba(255,255,255,0.04);
+            --surface-hover: rgba(255,255,255,0.07);
+            --border: rgba(255,255,255,0.08);
+            --text: #e4e4ef;
+            --text-muted: #8b8ba3;
+            --accent: #6c63ff;
+            --accent-glow: rgba(108,99,255,0.35);
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --radius: 16px;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* animated gradient blobs */
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: .35;
+            z-index: -1;
+            animation: drift 18s ease-in-out infinite alternate;
+        }
+        body::before { width: 600px; height: 600px; background: #6c63ff; top: -200px; left: -150px; }
+        body::after  { width: 500px; height: 500px; background: #00c9a7; bottom: -200px; right: -150px; animation-delay: -9s; }
+
+        @keyframes drift {
+            0%   { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(60px, 40px) scale(1.12); }
+        }
+
+        /* ───────── Layout ───────── */
+        .container {
+            width: 100%;
+            max-width: 720px;
+            padding: 2rem 1.25rem 4rem;
+        }
+
+        /* ───────── Header ───────── */
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        header .badge {
+            display: inline-block;
+            background: var(--accent);
+            color: #fff;
+            font-size: .7rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: .35rem .85rem;
+            border-radius: 999px;
+            margin-bottom: 1rem;
+            box-shadow: 0 0 24px var(--accent-glow);
+        }
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            line-height: 1.2;
+            background: linear-gradient(135deg, #fff 30%, #6c63ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        header p {
+            color: var(--text-muted);
+            font-size: .95rem;
+            margin-top: .6rem;
+        }
+
+        /* ───────── Card ───────── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: border-color .3s;
+        }
+        .card:hover { border-color: rgba(108,99,255,.25); }
+
+        label {
+            display: block;
+            font-weight: 600;
+            font-size: .85rem;
+            margin-bottom: .5rem;
+            letter-spacing: .3px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 180px;
+            background: rgba(0,0,0,.25);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: .92rem;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .actions {
+            display: flex;
+            gap: .75rem;
+            margin-top: 1.25rem;
+        }
+
+        button {
+            flex: 1;
+            padding: .85rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-family: var(--font);
+            font-size: .9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform .15s, box-shadow .25s, background .2s;
+        }
+        button:active { transform: scale(.97); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6c63ff, #4f46e5);
+            color: #fff;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+        .btn-primary:hover { box-shadow: 0 6px 28px var(--accent-glow); }
+        .btn-primary:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--surface-hover);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,.1); color: var(--text); }
+
+        /* ───────── Result Section ───────── */
+        .result {
+            margin-top: 2rem;
+            animation: fadeUp .45s ease;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            margin-bottom: 1.25rem;
+        }
+        .result-header .icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            font-size: 1.35rem;
+        }
+        .result-header h2 { font-size: 1.15rem; font-weight: 700; }
+        .result-header .conf {
+            margin-left: auto;
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+
+        /* category colours */
+        .cat-spam        .icon { background: rgba(239,68,68,.15); }
+        .cat-spam        .conf { color: var(--danger); }
+        .cat-job         .icon { background: rgba(59,130,246,.15); }
+        .cat-job         .conf { color: var(--info); }
+        .cat-important   .icon { background: rgba(245,158,11,.15); }
+        .cat-important   .conf { color: var(--warning); }
+        .cat-promotion   .icon { background: rgba(34,197,94,.15); }
+        .cat-promotion   .conf { color: var(--success); }
+
+        /* probability bars */
+        .prob-list { display: flex; flex-direction: column; gap: .65rem; }
+        .prob-item label { font-weight: 500; font-size: .8rem; margin-bottom: .25rem; color: var(--text-muted); }
+        .prob-bar-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,.06);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .prob-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width .6s ease;
+        }
+        /* bar colours */
+        .bar-spam       { background: var(--danger); }
+        .bar-job        { background: var(--info); }
+        .bar-important  { background: var(--warning); }
+        .bar-promotion  { background: var(--success); }
+
+        .prob-value {
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* error */
+        .error-box {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(239,68,68,.1);
+            border: 1px solid rgba(239,68,68,.3);
+            border-radius: 12px;
+            color: #fca5a5;
+            font-size: .88rem;
+            animation: fadeUp .4s ease;
+        }
+
+        /* spinner */
+        .spinner {
+            display: inline-block;
+            width: 18px; height: 18px;
+            border: 2.5px solid rgba(255,255,255,.25);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .6s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* footer */
+        footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: .78rem;
+        }
+        footer a { color: var(--accent); text-decoration: none; }
+
+        /* responsive */
+        @media (max-width: 480px) {
+            header h1 { font-size: 1.6rem; }
+            .card { padding: 1.25rem; }
+            .actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <span class="badge">AI-Powered</span>
+            <h1>Email Classifier</h1>
+            <p>Paste an email below and let the model classify it instantly.</p>
+        </header>
+
+        <!-- Input Card -->
+        <div class="card">
+            <label for="emailInput">Email Content</label>
+            <textarea id="emailInput" placeholder="Paste or type email text here…"></textarea>
+            <div class="actions">
+                <button class="btn-primary" id="classifyBtn" onclick="classify()">Classify Email</button>
+                <button class="btn-secondary" onclick="clearAll()">Clear</button>
+            </div>
+        </div>
+
+        <!-- Result Area -->
+        <div id="resultArea"></div>
+
+        <footer>
+            Built with <a href="https://scikit-learn.org" target="_blank">scikit-learn</a> &amp; <a href="https://flask.palletsprojects.com" target="_blank">Flask</a> — AI Email Classification System
+        </footer>
+    </div>
+
+    <script>
+        const CATEGORY_META = {
+            'Spam':        { icon: '🚫', cls: 'cat-spam',      bar: 'bar-spam' },
+            'Job Related': { icon: '💼', cls: 'cat-job',       bar: 'bar-job' },
+            'Important':   { icon: '⚡', cls: 'cat-important', bar: 'bar-important' },
+            'Promotion':   { icon: '🏷️', cls: 'cat-promotion', bar: 'bar-promotion' },
+        };
+
+        async function classify() {
+            const text = document.getElementById('emailInput').value.trim();
+            const area = document.getElementById('resultArea');
+            const btn  = document.getElementById('classifyBtn');
+
+            if (!text) {
+                area.innerHTML = '<div class="error-box">Please enter some email text first.</div>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Classifying…';
+            area.innerHTML = '';
+
+            try {
+                const res  = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email_text: text }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    area.innerHTML = `<div class="error-box">${data.error || 'Something went wrong.'}</div>`;
+                    return;
+                }
+
+                const meta = CATEGORY_META[data.category] || { icon: '📧', cls: '', bar: '' };
+                const confPct = (data.confidence * 100).toFixed(1);
+
+                let probsHTML = '';
+                if (data.probabilities) {
+                    probsHTML = '<div class="prob-list">';
+                    for (const [cat, prob] of Object.entries(data.probabilities)) {
+                        const m = CATEGORY_META[cat] || { bar: '' };
+                        const pct = (prob * 100).toFixed(1);
+                        probsHTML += `
+                            <div class="prob-item">
+                                <label>${cat}</label>
+                                <div class="prob-bar-track">
+                                    <div class="prob-bar-fill ${m.bar}" style="width:${pct}%"></div>
+                                </div>
+                                <div class="prob-value">${pct}%</div>
+                            </div>`;
+                    }
+                    probsHTML += '</div>';
+                }
+
+                area.innerHTML = `
+                    <div class="card result ${meta.cls}">
+                        <div class="result-header">
+                            <div class="icon">${meta.icon}</div>
+                            <h2>${data.category}</h2>
+                            <span class="conf">${confPct}%</span>
+                        </div>
+                        ${probsHTML}
+                    </div>`;
+            } catch (err) {
+                area.innerHTML = `<div class="error-box">Network error — is the server running?</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Classify Email';
+            }
+        }
+
+        function clearAll() {
+            document.getElementById('emailInput').value = '';
+            document.getElementById('resultArea').innerHTML = '';
+        }
+
+        // Allow Ctrl+Enter to submit
+        document.getElementById('emailInput').addEventListener('keydown', e => {
+            if (e.ctrlKey && e.key === 'Enter') classify();
+        });
+    </script>
+</body>
+</html>
